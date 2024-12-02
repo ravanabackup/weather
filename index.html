@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Indian Weather RSS Feeds</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        // Tailwind Dark Mode Toggle
+        function toggleDarkMode() {
+            document.documentElement.classList.toggle('dark');
+        }
+
+        // Fetch and parse RSS feeds
+        async function fetchRSSFeed(url) {
+            try {
+                const response = await fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`);
+                const xmlText = await response.text();
+                const parser = new DOMParser();
+                const xmlDoc = parser.parseFromString(xmlText, 'text/xml');
+                return Array.from(xmlDoc.querySelectorAll('item'))
+                    .slice(0, 5)
+                    .map(item => ({
+                        title: item.querySelector('title')?.textContent || 'No Title',
+                        description: item.querySelector('description')?.textContent || 'No Description',
+                        pubDate: new Date(item.querySelector('pubDate')?.textContent || Date.now()).toLocaleString('en-IN', {
+                            timeZone: 'Asia/Kolkata',
+                            year: 'numeric',
+                            month: 'short',
+                            day: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                        })
+                    }));
+            } catch (error) {
+                console.error('Error fetching RSS feed:', error);
+                return [];
+            }
+        }
+
+        // Render feeds for each location
+        async function renderFeeds() {
+            const locations = [
+                { name: 'Chandigarh', url: 'https://sachet.ndma.gov.in/cap_public_website/rss/rss_chandigarh.xml' },
+                { name: 'Madhya Pradesh', url: 'https://sachet.ndma.gov.in/cap_public_website/rss/rss_madhya.xml' },
+                { name: 'Kerala', url: 'https://sachet.ndma.gov.in/cap_public_website/rss/rss_kerala.xml' }
+            ];
+
+            const container = document.getElementById('feed-container');
+            
+            for (const location of locations) {
+                const feeds = await fetchRSSFeed(location.url);
+                const locationDiv = document.createElement('div');
+                locationDiv.className = 'bg-white dark:bg-gray-800 rounded-lg shadow-md p-4 m-2';
+                
+                const titleDiv = document.createElement('h2');
+                titleDiv.className = 'text-xl font-bold mb-3 text-gray-800 dark:text-white';
+                titleDiv.textContent = `${location.name} Weather Alerts`;
+                locationDiv.appendChild(titleDiv);
+
+                if (feeds.length === 0) {
+                    const noFeedDiv = document.createElement('p');
+                    noFeedDiv.className = 'text-gray-500 dark:text-gray-300';
+                    noFeedDiv.textContent = 'No feeds available';
+                    locationDiv.appendChild(noFeedDiv);
+                } else {
+                    feeds.forEach(feed => {
+                        const feedDiv = document.createElement('div');
+                        feedDiv.className = 'mb-3 pb-3 border-b border-gray-200 dark:border-gray-700';
+                        
+                        const titleP = document.createElement('p');
+                        titleP.className = 'font-semibold text-gray-700 dark:text-gray-200';
+                        titleP.textContent = feed.title;
+                        
+                        const descP = document.createElement('p');
+                        descP.className = 'text-sm text-gray-600 dark:text-gray-400';
+                        descP.textContent = feed.description;
+                        
+                        const dateP = document.createElement('p');
+                        dateP.className = 'text-xs text-gray-500 dark:text-gray-500 italic';
+                        dateP.textContent = feed.pubDate;
+
+                        feedDiv.appendChild(titleP);
+                        feedDiv.appendChild(descP);
+                        feedDiv.appendChild(dateP);
+                        locationDiv.appendChild(feedDiv);
+                    });
+                }
+
+                container.appendChild(locationDiv);
+            }
+        }
+
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', renderFeeds);
+    </script>
+</head>
+<body class="bg-gray-100 dark:bg-gray-900 min-h-screen flex flex-col">
+    <div class="container mx-auto px-4 py-8">
+        <div class="flex justify-between items-center mb-6">
+            <h1 class="text-3xl font-bold text-gray-900 dark:text-white">
+                Indian Weather RSS Feeds
+            </h1>
+            <button 
+                onclick="toggleDarkMode()" 
+                class="bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white px-4 py-2 rounded-md"
+            >
+                Toggle Dark Mode
+            </button>
+        </div>
+
+        <div id="feed-container" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <!-- Feeds will be dynamically populated here -->
+        </div>
+    </div>
+</body>
+</html>
